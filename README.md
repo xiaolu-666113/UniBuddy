@@ -86,8 +86,7 @@ XingHuo/
 
 
 ```
-git clone https://github.com/yourname/unibuddy-campus-assistant.git
-cd XingHuo
+git clone https://github.com/xiaolu-666113/UniBuddy.git
 ```
 
 
