@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+  <meta charset="UTF-8">
+  <title>UniBuddy - 安徽大学 AI 校园助手</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+  <style>
+    body {
+      background: radial-gradient(circle at center, #f0f8ff, #add8e6);
+      font-family: 'Segoe UI', sans-serif;
+      padding: 40px;
+      margin: 0;
+      overflow: hidden;
+    }
+    .card {
+      border-radius: 1rem;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+      margin-bottom: 30px;
+      background: white;
+      z-index: 10;
+      position: relative;
+    }
+    .header {
+      font-weight: 700;
+      font-size: 32px;
+      margin-bottom: 20px;
+      color: #1e3a8a;
+      text-shadow: 1px 1px 2px #aaa;
+      position: relative;
+      z-index: 10;
+    }
+    #chatbox {
+      height: 300px;
+      overflow-y: auto;
+      background-color: #ffffff;
+      border: 1px solid #ccc;
+      border-radius: 0.5rem;
+      padding: 15px;
+    }
+    .chat-entry {
+      margin-bottom: 10px;
+    }
+    .input-group {
+      margin-top: 10px;
+    }
+    .btn-primary {
+      background-color: #2563eb;
+      border: none;
+    }
+    .btn-primary:hover {
+      background-color: #1d4ed8;
+    }
+    .section-title {
+      font-weight: 600;
+      color: #2563eb;
+    }
+    canvas {
+      position: fixed;
+      top: 0;
+      left: 0;
+      z-index: 1;
+    }
+    #scoreBoard {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      font-size: 18px;
+      font-weight: bold;
+      background: rgba(255,255,255,0.6);
+      padding: 6px 10px;
+      border-radius: 8px;
+      z-index: 100;
+    }
+  </style>
+</head>
+<body>
+  <canvas id="canvas"></canvas>
+  <div class="container position-relative" style="z-index: 10">
+    <div class="text-center mb-4">
+      <h1 class="header">🎓 UniBuddy - 安徽大学 AI 校园助手</h1>
+    </div>
+
+    <div class="card p-4">
+      <h4 class="section-title">🤖 M1：多轮对话模块</h4>
+      <div id="chatbox"></div>
+      <div class="input-group">
+        <input type="text" id="message" class="form-control" placeholder="输入你的问题...">
+        <button class="btn btn-primary" onclick="sendChat()">发送</button>
+      </div>
+    </div>
+
+    <div class="card p-4">
+      <h4 class="section-title">📚 M2：知识库问答模块</h4>
+      <div class="input-group">
+        <input type="text" id="docQuestion" class="form-control" placeholder="你想问文档什么问题？">
+        <button class="btn btn-primary" onclick="askDoc()">提问文档</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // M1 & M2 聊天逻辑
+    function sendChat() {
+      const msg = document.getElementById("message").value;
+      const box = document.getElementById("chatbox");
+      box.innerHTML += `<p class='chat-entry'><strong>我:</strong> ${msg}</p>`;
+      fetch('/chat', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({message: msg})
+      })
+      .then(res => res.json())
+      .then(data => {
+        box.innerHTML += `<p class='chat-entry'><strong>UniBuddy:</strong> ${data.reply}</p>`;
+        document.getElementById("message").value = "";
+        box.scrollTop = box.scrollHeight;
+      });
+    }
+
+    function askDoc() {
+      const question = document.getElementById("docQuestion").value;
+      fetch("/ask_doc", {
+        method: "POST",
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({question: question})
+      })
+      .then(res => res.json())
+      .then(data => {
+        const box = document.getElementById("chatbox");
+        box.innerHTML += `<p class='chat-entry'><strong>📄 文档问答:</strong> ${data.answer}</p>`;
+        document.getElementById("docQuestion").value = "";
+        box.scrollTop = box.scrollHeight;
+      });
+    }
+
+    // 球体物理特效
+    const canvas = document.getElementById("canvas");
+    const ctx = canvas.getContext("2d");
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+    let score = 0;
+    const scoreBoard = document.getElementById("scoreBoard");
+    class Ball {
+      constructor(x, y, radius, color) {
+        this.x = x;
+        this.y = y;
+        this.radius = radius;
+        this.color = color;
+        this.vx = (Math.random() - 0.5) * 2;
+        this.vy = (Math.random() - 0.5) * 2;
+        this.gravity = 0;
+        this.friction = 0.98;
+        this.scoredHoops = new Set();
+      }
+      draw() {
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+        ctx.fillStyle = this.color;
+        ctx.fill();
+        ctx.closePath();
+      }
+      update() {
+        this.vy += this.gravity;
+        this.vx *= this.friction;
+        this.vy *= this.friction;
+        this.x += this.vx;
+        this.y += this.vy;
+        if (this.y + this.radius > canvas.height) {
+          this.y = canvas.height - this.radius;
+          this.vy *= -1;
+        }
+
+
+      // 上边界（新增）
+      if (this.y - this.radius < 0) {
+        this.y = this.radius;
+        this.vy *= -1;
+      }
+
+        if (this.x + this.radius > canvas.width || this.x - this.radius < 0) {
+          this.vx *= -1;
+        }
+        this.draw();
+      }
+      applyForce(x, y) {
+        let dx = this.x - x;
+        let dy = this.y - y;
+        let dist = Math.sqrt(dx * dx + dy * dy);
+        let force = 300 / (dist + 50);
+        let angle = Math.atan2(dy, dx);
+        this.vx += Math.cos(angle) * force;
+        this.vy += Math.sin(angle) * force;
+      }
+    }
+    class Hoop {
+      constructor(x, y, radius) {
+        this.x = x;
+        this.y = y;
+        this.radius = radius;
+      }
+      draw() {
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+        ctx.strokeStyle = "red";
+        ctx.lineWidth = 4;
+        ctx.stroke();
+        ctx.closePath();
+      }
+      checkScore(ball) {
+        let dx = ball.x - this.x;
+        let dy = ball.y - this.y;
+        let dist = Math.sqrt(dx * dx + dy * dy);
+        if (dist < this.radius - ball.radius && !ball.scoredHoops.has(this)) {
+          score += 1;
+          scoreBoard.innerText = `Score: ${score}`;
+          ball.scoredHoops.add(this);
+        }
+        if (dist > this.radius + ball.radius) {
+          ball.scoredHoops.delete(this);
+        }
+      }
+    }
+    const colors = ["#ff7f50", "#87ceeb", "#ffa07a", "#20b2aa", "#9370db"];
+    let balls = [];
+    for (let i = 0; i < 20; i++) {
+      let radius = 15;
+      let x = Math.random() * (canvas.width - 2 * radius) + radius;
+      let y = Math.random() * (canvas.height - 2 * radius) + radius;
+      let color = colors[Math.floor(Math.random() * colors.length)];
+      balls.push(new Ball(x, y, radius, color));
+    }
+    let hoops = [
+      new Hoop(canvas.width / 3, canvas.height / 2, 40),
+      new Hoop(canvas.width * 2 / 3, canvas.height / 3, 40)
+    ];
+    function animate() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      for (let hoop of hoops) hoop.draw();
+      for (let ball of balls) {
+        ball.update();
+        for (let hoop of hoops) hoop.checkScore(ball);
+      }
+      requestAnimationFrame(animate);
+    }
+    animate();
+    canvas.addEventListener("click", (e) => {
+      for (let ball of balls) {
+        ball.applyForce(e.clientX, e.clientY);
+      }
+      showPulse(e.clientX, e.clientY);
+    });
+    function showPulse(x, y) {
+      let radius = 0;
+      let opacity = 1;
+      function pulse() {
+        ctx.beginPath();
+        ctx.arc(x, y, radius, 0, Math.PI * 2);
+        ctx.strokeStyle = `rgba(0,0,0,${opacity})`;
+        ctx.lineWidth = 2;
+        ctx.stroke();
+        ctx.closePath();
+        radius += 5;
+        opacity -= 0.03;
+        if (opacity > 0) requestAnimationFrame(pulse);
+      }
+      pulse();
+    }
+    window.addEventListener("resize", () => {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+    });
+  </script>
+</body>
+</html>

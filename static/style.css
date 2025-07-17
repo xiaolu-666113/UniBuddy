@@ -1,0 +1,31 @@
+body {
+    margin: 0;
+    font-family: "Helvetica Neue", sans-serif;
+    background: linear-gradient(to right, #f8f9fa, #e0f7fa);
+}
+
+.container {
+    max-width: 800px;
+    margin: 80px auto;
+    padding: 20px;
+    background: white;
+    border-radius: 20px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+    z-index: 1;
+    position: relative;
+}
+
+h1, h2 {
+    color: #333;
+    text-align: center;
+}
+
+#chatbox {
+    height: 250px;
+    overflow-y: auto;
+    border: 1px solid #ccc;
+    padding: 10px;
+    background: #f0f8ff;
+    margin-bottom: 10px;
+    border-radius: 8px;
+}
